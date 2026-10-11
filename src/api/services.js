@@ -92,6 +92,9 @@ export const categoryService = {
   async deleteCategory(id) {
     return await pb.collection('categories').delete(id);
   },
+  async updateCategoryScenes(id, scenes) {
+    return await pb.collection('categories').update(id, { scenes });
+  },
 
   // 快捷场景标签 CRUD
   async getQuickTags() {

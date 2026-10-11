@@ -386,6 +386,27 @@
             </select>
           </div>
 
+          <!-- 所属大分类关联细分标签 (智能联动呈现) -->
+          <div class="form-group" style="margin-bottom:14px;" v-if="currentCategorySubTags.length > 0">
+            <div class="section-label-flex">
+              <label class="form-label" style="margin-bottom:0;color:#60a5fa;">
+                🎯 【{{ currentCategoryName }}】专属细分标签 (点击快速关联)
+              </label>
+              <span class="sub-hint">直接决定该资源在分类下的细分筛选展示</span>
+            </div>
+            <div class="preset-chips-wrap">
+              <span
+                v-for="st in currentCategorySubTags"
+                :key="st"
+                class="preset-chip subtag-chip-active"
+                :class="{ active: isTagSelected(st) }"
+                @click="toggleTag(st)"
+              >
+                {{ isTagSelected(st) ? '✓ ' : '+ ' }}{{ st }}
+              </span>
+            </div>
+          </div>
+
           <div class="form-group" style="margin-bottom:12px;">
             <label class="form-label">运行平台</label>
             <input type="text" class="form-input" v-model="form.platform" placeholder="全平台 / Windows" style="margin-bottom:6px;" />
@@ -612,6 +633,20 @@ const iconFailed = ref(false);
 const failedImages = reactive({});
 const categories = ref([]);
 const allQuickTags = ref([]);
+
+// 当前大分类及其专属细分标签计算属性
+const currentCategoryObj = computed(() => {
+  return categories.value.find(c => (c.cat_id === form.category || c.id === form.category));
+});
+
+const currentCategoryName = computed(() => {
+  return currentCategoryObj.value?.name || form.category || '';
+});
+
+const currentCategorySubTags = computed(() => {
+  if (!currentCategoryObj.value || !Array.isArray(currentCategoryObj.value.scenes)) return [];
+  return currentCategoryObj.value.scenes.map(s => (s.name || s));
+});
 
 // 1. 网络资源一键套用预设模板库
 const quickTemplates = [
@@ -1104,7 +1139,7 @@ const handleSubmit = async () => {
       panUrl: form.panUrl.trim(),
       pwd: form.pwd.trim(),
       icon: form.icon.trim() || '/images/cloud.svg',
-      badge: form.badge.trim(),
+      badge: form.badge.trim() || (form.tags && form.tags[0] ? getTagText(form.tags[0]) : ''),
       desc: form.desc.trim(),
       detailHtml: form.detailHtml,
       features: form.features,
@@ -2196,6 +2231,20 @@ onMounted(async () => {
   background: #3b82f6;
   border-color: #3b82f6;
   color: #ffffff;
+}
+
+
+.subtag-chip-active {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+  color: #93c5fd !important;
+}
+
+.subtag-chip-active.active {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.4), rgba(59, 130, 246, 0.5)) !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
 }
 
 </style>

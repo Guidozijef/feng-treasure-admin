@@ -49,7 +49,7 @@
             <th>收藏</th>
             <th>网盘直链</th>
             <th>提取码</th>
-            <th>角标</th>
+            <th>细分标签</th>
             <th>更新时间</th>
             <th style="min-width:110px;">操作</th>
           </tr>
@@ -227,4 +227,31 @@ onMounted(async () => {
   width: 100%;
   table-layout: auto;
 }
+
+.table-tags-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.table-tag-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  white-space: nowrap;
+}
+
+.table-tag-more {
+  font-size: 10px;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
 </style>
