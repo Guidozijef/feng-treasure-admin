@@ -74,25 +74,14 @@
               placeholder="输入引人注目的资源标题，如：PicGo 全功能图床神器"
             />
           </div>
-          <div class="form-row">
-            <div class="form-group" style="flex:1;">
-              <label class="form-label">副标题 / 官方全称</label>
-              <input
-                type="text"
-                class="form-input"
-                v-model="form.fullTitle"
-                placeholder="如：PicGo - 一键上传并生成 Markdown 链接的图床客户端"
-              />
-            </div>
-            <div class="form-group" style="flex:1;">
-              <label class="form-label">一句话简要摘要 (展示在小程序卡片)</label>
-              <input
-                type="text"
-                class="form-input"
-                v-model="form.desc"
-                placeholder="简要概括核心亮点，50字以内"
-              />
-            </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">一句话简要摘要 (展示在小程序卡片及列表描述)</label>
+            <input
+              type="text"
+              class="form-input"
+              v-model="form.desc"
+              placeholder="简要概括资源核心亮点，展示在小程序卡片上，50字以内"
+            />
           </div>
         </div>
 
@@ -286,28 +275,223 @@
                 <div v-else class="res-icon-placeholder">{{ (form.title || '宝').charAt(0) }}</div>
               </div>
               <div class="mp-mock-title-area">
-                <div class="mp-mock-title">{{ form.title || '资源标题' }}</div>
-                <div class="mp-mock-tags">
-                  <span class="mp-badge-tag tag-ver">{{ form.version || '最新版' }}</span>
-                  <span class="mp-badge-tag tag-plat">{{ form.platform || '全平台' }}</span>
+                <div class="mp-mock-title-row">
+                  <span class="mp-mock-title">{{ form.title || '资源标题' }}</span>
+                  <span v-if="form.version" class="mp-badge-tag tag-ver">{{ form.version }}</span>
                   <span v-if="form.badge" class="mp-badge-tag tag-hot">{{ form.badge }}</span>
+                </div>
+                <div class="mp-mock-tags" v-if="form.tags && form.tags.length">
+                  <span v-for="t in form.tags.slice(0, 3)" :key="getTagText(t)" class="mp-subtag-pill">
+                    {{ getTagText(t) }}
+                  </span>
                 </div>
               </div>
             </div>
-            <div class="mp-mock-desc">{{ form.desc || '资源简介内容将在此处紧凑展示...' }}</div>
+            <div class="mp-mock-desc">{{ form.desc || '一句话简要摘要内容将在此处展示...' }}</div>
             <div class="mp-mock-footer">
-              <div class="mp-mock-score">★ {{ form.rating || '9.9' }}</div>
-              <div class="mp-mock-down">{{ form.downloads || 0 }} 次转存</div>
-              <div class="mp-mock-btn">立即转存</div>
+              <div class="mp-mock-meta-row">
+                <span v-if="form.platform" class="mp-badge-tag tag-plat">{{ form.platform }}</span>
+                <span v-if="form.size" class="mp-badge-tag tag-size">{{ form.size }}</span>
+                <span class="mp-mock-score">⭐ {{ form.rating || '9.9' }}</span>
+              </div>
+              <div class="mp-mock-btn">获取</div>
             </div>
           </div>
         </div>
 
-        <!-- B. 网盘下载与直链配置 -->
+        <!-- B. 统一规范：产品核心标签与属性配置 (驱动小程序卡片展示与分类高级筛选) -->
+        <div class="panel-card canonical-card">
+          <div class="panel-section-title" style="margin-bottom:6px;">
+            <span class="title-icon">🏷️</span>
+            <span>产品核心标签与规格规范 (6 大核心维度)</span>
+          </div>
+          <p class="canonical-sub-hint">
+            严格按照规范统一配置：视觉角标、分类细分标签、版本号、运行平台、文件体积、好评评分。
+          </p>
+
+          <!-- 1. 视觉角标文案 (badge) -->
+          <div class="form-group canonical-group">
+            <div class="section-label-flex">
+              <label class="form-label required" style="margin-bottom:0;">
+                ① 视觉角标文案 (badge)
+              </label>
+              <span v-if="form.badge" class="quick-clear-btn" @click="form.badge = ''">清空 ({{ form.badge }})</span>
+            </div>
+            <div class="field-sub-note">用于卡片右上角及详情页的高亮营销徽标 (如 🔥 热门、💎 独家、免激活、绿色免装)</div>
+            
+            <!-- 角标快捷分类切换 -->
+            <div class="category-pill-tabs" style="margin-top:6px;">
+              <button
+                v-for="grp in badgeCategoryGroups"
+                :key="grp.name"
+                type="button"
+                class="cat-tab-pill"
+                :class="{ active: activeBadgeGroup === grp.name }"
+                @click="activeBadgeGroup = grp.name"
+              >
+                {{ grp.name }}
+              </button>
+            </div>
+            <input
+              type="text"
+              class="form-input"
+              v-model="form.badge"
+              placeholder="点击下方快捷胶囊，或自由手动输入"
+              style="margin-bottom:8px;"
+            />
+            <div class="preset-chips-wrap">
+              <span
+                v-for="b in currentBadgeList"
+                :key="b"
+                class="preset-chip"
+                :class="{ active: form.badge === b }"
+                @click="form.badge = (form.badge === b ? '' : b)"
+              >
+                {{ b }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 2. 所属大分类与细分标签 (category & tags) -->
+          <div class="form-group canonical-group">
+            <label class="form-label required">② 所属大分类 (category)</label>
+            <select class="form-select" v-model="form.category" style="margin-bottom:10px;">
+              <option v-for="cat in categories" :key="cat.cat_id || cat.id" :value="cat.cat_id || cat.id">
+                {{ cat.name }} ({{ cat.cat_id }})
+              </option>
+            </select>
+
+            <div class="section-label-flex">
+              <label class="form-label" style="margin-bottom:0;color:#38bdf8;">
+                🏷️ 【{{ currentCategoryName }}】专属细分标签 (tags)
+              </label>
+              <span v-if="form.tags && form.tags.length" class="quick-clear-btn" @click="form.tags = []">
+                清空全部 ({{ form.tags.length }})
+              </span>
+            </div>
+            <div class="field-sub-note">分类下的所有细分标签将用于小程序高级筛选与列表细分子项</div>
+
+            <!-- 当前大分类专属细分标签快捷点击勾选 -->
+            <div class="preset-chips-wrap" style="margin-top:8px;" v-if="currentCategorySubTags.length > 0">
+              <span
+                v-for="st in currentCategorySubTags"
+                :key="st"
+                class="preset-chip subtag-chip-active"
+                :class="{ active: isTagSelected(st) }"
+                @click="toggleTag(st)"
+                title="点击关联/取消此细分标签"
+              >
+                {{ isTagSelected(st) ? '✓ ' : '+ ' }}{{ st }}
+              </span>
+            </div>
+
+            <!-- 手动输入新增自定义细分标签 -->
+            <div class="custom-tag-input-row" style="margin-top:10px;">
+              <input
+                type="text"
+                class="form-input form-input-sm"
+                v-model="customNewTag"
+                placeholder="输入额外自定义细分标签..."
+                @keydown.enter.prevent="addCustomTag"
+              />
+              <button type="button" class="btn btn-secondary btn-sm" @click="addCustomTag">
+                + 添加标签
+              </button>
+            </div>
+
+            <!-- 已选标签状态栏 -->
+            <div v-if="form.tags && form.tags.length" class="selected-tags-container" style="margin-top:8px;">
+              <span class="selected-prompt">已关联 {{ form.tags.length }} 个细分标签:</span>
+              <div class="selected-pills-wrap">
+                <span
+                  v-for="st in form.tags"
+                  :key="getTagText(st)"
+                  class="selected-active-pill"
+                  @click="toggleTag(getTagText(st))"
+                  title="点击移除此标签"
+                >
+                  {{ getTagText(st) }} <span class="pill-remove-icon">×</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 运行平台 (platform) -->
+          <div class="form-group canonical-group">
+            <label class="form-label">③ 运行平台 (platform)</label>
+            <input type="text" class="form-input" v-model="form.platform" placeholder="全平台 / Windows / macOS" style="margin-bottom:6px;" />
+            <div class="preset-chips-wrap">
+              <span
+                v-for="p in platformPresets"
+                :key="p"
+                class="preset-chip mini-chip"
+                :class="{ active: form.platform === p }"
+                @click="form.platform = p"
+              >
+                {{ p }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 4. 版本号 (version) -->
+          <div class="form-group canonical-group">
+            <label class="form-label">④ 版本号 (version)</label>
+            <input type="text" class="form-input" v-model="form.version" placeholder="v2.4.1 / 最新增强版" style="margin-bottom:6px;" />
+            <div class="preset-chips-wrap">
+              <span
+                v-for="v in versionPresets"
+                :key="v"
+                class="preset-chip mini-chip"
+                :class="{ active: form.version === v }"
+                @click="form.version = v"
+              >
+                {{ v }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 5. 文件体积 (size) 与 6. 极客评分 (rating) -->
+          <div class="form-row canonical-group">
+            <div class="form-group" style="flex:1.2;">
+              <label class="form-label">⑤ 文件体积 (size)</label>
+              <input type="text" class="form-input" v-model="form.size" placeholder="如：82.4 MB" style="margin-bottom:6px;" />
+              <div class="preset-chips-wrap">
+                <span
+                  v-for="s in sizePresets"
+                  :key="s"
+                  class="preset-chip mini-chip"
+                  :class="{ active: form.size === s }"
+                  @click="form.size = s"
+                >
+                  {{ s }}
+                </span>
+              </div>
+            </div>
+            <div class="form-group" style="flex:1;">
+              <div class="section-label-flex">
+                <label class="form-label" style="margin-bottom:0;">⑥ 好评评分 (rating)</label>
+              </div>
+              <div class="preset-chips-wrap" style="margin-bottom:6px;">
+                <span
+                  v-for="r in [9.9, 9.8, 9.5, 9.0]"
+                  :key="r"
+                  class="preset-chip mini-chip"
+                  :class="{ active: form.rating === r }"
+                  @click="form.rating = r"
+                >
+                  ⭐ {{ r }}
+                </span>
+              </div>
+              <input type="number" step="0.1" class="form-input" v-model.number="form.rating" placeholder="9.9" />
+            </div>
+          </div>
+        </div>
+
+        <!-- C. 网盘直链与分发下载配置 -->
         <div class="panel-card">
           <div class="panel-section-title" style="margin-bottom:14px;">
             <span class="title-icon">🔗</span>
-            <span>网盘直链与提取码</span>
+            <span>网盘直链与分发配置</span>
           </div>
           <div class="form-group" style="margin-bottom:12px;">
             <div class="section-label-flex">
@@ -367,200 +551,12 @@
               </div>
               <input type="number" class="form-input" v-model.number="form.downloads" placeholder="0" style="margin-top:6px;" />
             </div>
-          </div>
-        </div>
-
-        <!-- C. 资产分类与元数据 -->
-        <div class="panel-card">
-          <div class="panel-section-title" style="margin-bottom:14px;">
-            <span class="title-icon">⚙️</span>
-            <span>分类与基础规格</span>
-          </div>
-
-          <div class="form-group" style="margin-bottom:12px;">
-            <label class="form-label required">所属大分类</label>
-            <select class="form-select" v-model="form.category">
-              <option v-for="cat in categories" :key="cat.cat_id || cat.id" :value="cat.cat_id || cat.id">
-                {{ cat.name }} ({{ cat.cat_id }})
-              </option>
-            </select>
-          </div>
-
-          <!-- 所属大分类关联细分标签 (智能联动呈现) -->
-          <div class="form-group" style="margin-bottom:14px;" v-if="currentCategorySubTags.length > 0">
-            <div class="section-label-flex">
-              <label class="form-label" style="margin-bottom:0;color:#60a5fa;">
-                🎯 【{{ currentCategoryName }}】专属细分标签 (点击快速关联)
-              </label>
-              <span class="sub-hint">直接决定该资源在分类下的细分筛选展示</span>
-            </div>
-            <div class="preset-chips-wrap">
-              <span
-                v-for="st in currentCategorySubTags"
-                :key="st"
-                class="preset-chip subtag-chip-active"
-                :class="{ active: isTagSelected(st) }"
-                @click="toggleTag(st)"
-              >
-                {{ isTagSelected(st) ? '✓ ' : '+ ' }}{{ st }}
-              </span>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:12px;">
-            <label class="form-label">运行平台</label>
-            <input type="text" class="form-input" v-model="form.platform" placeholder="全平台 / Windows" style="margin-bottom:6px;" />
-            <div class="preset-chips-wrap">
-              <span
-                v-for="p in platformPresets"
-                :key="p"
-                class="preset-chip mini-chip"
-                :class="{ active: form.platform === p }"
-                @click="form.platform = p"
-              >
-                {{ p }}
-              </span>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:12px;">
-            <label class="form-label">版本号</label>
-            <input type="text" class="form-input" v-model="form.version" placeholder="v1.0" style="margin-bottom:6px;" />
-            <div class="preset-chips-wrap">
-              <span
-                v-for="v in versionPresets"
-                :key="v"
-                class="preset-chip mini-chip"
-                :class="{ active: form.version === v }"
-                @click="form.version = v"
-              >
-                {{ v }}
-              </span>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group" style="flex:1.2;">
-              <label class="form-label">文件体积</label>
-              <input type="text" class="form-input" v-model="form.size" placeholder="如：68 MB" style="margin-bottom:6px;" />
-              <div class="preset-chips-wrap">
-                <span
-                  v-for="s in sizePresets"
-                  :key="s"
-                  class="preset-chip mini-chip"
-                  :class="{ active: form.size === s }"
-                  @click="form.size = s"
-                >
-                  {{ s }}
-                </span>
-              </div>
-            </div>
-            <div class="form-group" style="flex:1;">
-              <label class="form-label">好评评分</label>
-              <input type="number" step="0.1" class="form-input" v-model.number="form.rating" placeholder="9.9" />
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:14px;">
-            <div class="section-label-flex">
-              <label class="form-label" style="margin-bottom:0;">视觉角标文案 (badge)</label>
-              <span v-if="form.badge" class="quick-clear-btn" @click="form.badge = ''">清空选择 ({{ form.badge }})</span>
-            </div>
-            <!-- 角标分类标签切换 -->
-            <div class="category-pill-tabs">
-              <button
-                v-for="grp in badgeCategoryGroups"
-                :key="grp.name"
-                type="button"
-                class="cat-tab-pill"
-                :class="{ active: activeBadgeGroup === grp.name }"
-                @click="activeBadgeGroup = grp.name"
-              >
-                {{ grp.name }}
-              </button>
-            </div>
-            <input
-              type="text"
-              class="form-input"
-              v-model="form.badge"
-              placeholder="可直接点击下方预设胶囊，或自由手动输入"
-              style="margin-bottom:8px;"
-            />
-            <!-- 角标快捷预设池 -->
-            <div class="preset-chips-wrap">
-              <span
-                v-for="b in currentBadgeList"
-                :key="b"
-                class="preset-chip"
-                :class="{ active: form.badge === b }"
-                @click="form.badge = (form.badge === b ? '' : b)"
-              >
-                {{ b }}
-              </span>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:14px;">
-            <div class="section-label-flex">
-              <label class="form-label" style="margin-bottom:0;">关联前台场景标签 (tags)</label>
-              <div class="tags-action-links">
-                <span v-if="form.tags && form.tags.length" class="quick-clear-btn" @click="form.tags = []">
-                  清空全部 ({{ form.tags.length }})
-                </span>
-              </div>
-            </div>
-
-            <!-- 标签分类切换 -->
-            <div class="category-pill-tabs">
-              <button
-                v-for="tg in tagCategoryGroups"
-                :key="tg.name"
-                type="button"
-                class="cat-tab-pill"
-                :class="{ active: activeTagCategory === tg.name }"
-                @click="activeTagCategory = tg.name"
-              >
-                {{ tg.name }}
-              </button>
-            </div>
-
-            <!-- 已选标签状态栏 -->
-            <div v-if="form.tags && form.tags.length" class="selected-tags-container">
-              <span class="selected-prompt">已选 {{ form.tags.length }} 个标签:</span>
-              <div class="selected-pills-wrap">
-                <span
-                  v-for="st in form.tags"
-                  :key="getTagText(st)"
-                  class="selected-active-pill"
-                  @click="toggleTag(getTagText(st))"
-                  title="点击移除"
-                >
-                  {{ getTagText(st) }} <span class="pill-remove-icon">×</span>
-                </span>
-              </div>
-            </div>
-
-            <!-- 可选标签云池 -->
-            <div class="preset-chips-wrap tag-pool-scroll">
-              <span
-                v-for="t in currentTagList"
-                :key="t.tag_id || t.id || t.name"
-                class="preset-chip tag-preset-chip"
-                :class="{ active: isTagSelected(t.name) }"
-                @click="toggleTag(t.name)"
-              >
-                {{ isTagSelected(t.name) ? '✓ ' : '+ ' }}{{ t.name }}
-              </span>
-            </div>
-          </div>
-
-          <div class="form-row">
             <div class="form-group" style="flex:1;">
               <div class="section-label-flex">
-                <label class="form-label" style="margin-bottom:0;">初始收藏量 (favCount)</label>
+                <label class="form-label" style="margin-bottom:0;">初始收藏数</label>
                 <div class="pwd-chips">
                   <span
-                    v-for="fc in [66, 88, 168, 320, 666]"
+                    v-for="fc in [66, 128, 320]"
                     :key="fc"
                     class="pwd-chip"
                     :class="{ active: form.favCount === fc }"
@@ -572,6 +568,14 @@
               </div>
               <input type="number" class="form-input" v-model.number="form.favCount" placeholder="0" style="margin-top:6px;" />
             </div>
+          </div>
+        </div>
+
+        <!-- D. 系统标识与展示图标 -->
+        <div class="panel-card">
+          <div class="panel-section-title" style="margin-bottom:14px;">
+            <span class="title-icon">⚙️</span>
+            <span>系统标识与展示图标</span>
           </div>
 
           <div class="form-group" style="margin-top:4px;">
@@ -633,6 +637,16 @@ const iconFailed = ref(false);
 const failedImages = reactive({});
 const categories = ref([]);
 const allQuickTags = ref([]);
+const customNewTag = ref('');
+
+const addCustomTag = () => {
+  const t = customNewTag.value.trim();
+  if (!t) return;
+  if (!isTagSelected(t)) {
+    toggleTag(t);
+  }
+  customNewTag.value = '';
+};
 
 // 当前大分类及其专属细分标签计算属性
 const currentCategoryObj = computed(() => {
@@ -978,8 +992,7 @@ const applyTemplate = (tpl) => {
 const resetToDefaults = () => {
   if (!confirm('确定要清空并重置为默认空白状态吗？')) return;
   form.title = '';
-  form.fullTitle = '';
-  form.desc = '';
+    form.desc = '';
   form.badge = '';
   form.platform = '全平台';
   form.version = 'v1.0.0';
@@ -1005,8 +1018,7 @@ const form = reactive({
   id: '',
   res_id: 'res_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6),
   title: '',
-  fullTitle: '',
-  version: 'v1.0.0',
+    version: 'v1.0.0',
   category: 'pc',
   platform: '全平台',
   size: '',
@@ -1130,8 +1142,7 @@ const handleSubmit = async () => {
     const payload = {
       res_id: form.res_id.trim(),
       title: form.title.trim(),
-      fullTitle: form.fullTitle.trim() || form.title.trim(),
-      version: form.version.trim(),
+            version: form.version.trim(),
       category: form.category,
       platform: form.platform.trim(),
       size: form.size.trim(),
@@ -2245,6 +2256,69 @@ onMounted(async () => {
   border-color: #3b82f6 !important;
   color: #ffffff !important;
   box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
+}
+
+
+/* 核心规范属性面板 */
+.canonical-card {
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+}
+
+.canonical-sub-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+}
+
+.canonical-group {
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.canonical-group:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.field-sub-note {
+  font-size: 11px;
+  color: #64748b;
+  margin: 2px 0 6px 0;
+}
+
+.custom-tag-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mp-mock-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mp-mock-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.mp-subtag-pill {
+  font-size: 10px;
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  padding: 1px 6px;
+  border-radius: 4px;
+  line-height: 1.2;
 }
 
 </style>

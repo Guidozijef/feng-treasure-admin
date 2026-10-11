@@ -40,29 +40,27 @@
       <table class="admin-table compact-table">
         <thead>
           <tr>
-            <th style="min-width:200px;">资产信息</th>
+            <th style="min-width:200px;">资产信息 (含视觉角标)</th>
             <th>版本号</th>
             <th>所属分类</th>
-            <th>体积</th>
-            <th>评分</th>
-            <th>转存</th>
-            <th>收藏</th>
-            <th>网盘直链</th>
-            <th>提取码</th>
-            <th>细分标签</th>
+            <th style="min-width:160px;">细分标签 (tags)</th>
+            <th>平台与体积</th>
+            <th>极客评分</th>
+            <th>转存 / 收藏</th>
+            <th>网盘直链与提取码</th>
             <th>更新时间</th>
-            <th style="min-width:110px;">操作</th>
+            <th style="min-width:100px;">操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="12" style="text-align:center;padding:40px;color:#94a3b8;">正在从云端拉取资源...</td>
+            <td colspan="10" style="text-align:center;padding:40px;color:#94a3b8;">正在从云端拉取资源...</td>
           </tr>
           <tr v-else-if="items.length === 0">
-            <td colspan="12" style="text-align:center;padding:40px;color:#94a3b8;">暂无符合条件的资源</td>
+            <td colspan="10" style="text-align:center;padding:40px;color:#94a3b8;">暂无符合条件的资源</td>
           </tr>
           <tr v-for="item in items" :key="item.id">
-            <!-- 1. 资产信息 -->
+            <!-- 1. 资产信息与视觉角标 (badge) -->
             <td>
               <div class="table-title-cell">
                 <div class="res-thumb-icon">
@@ -70,47 +68,64 @@
                   <div v-else class="res-icon-placeholder">{{ (item.title || '宝').charAt(0) }}</div>
                 </div>
                 <div class="res-name-block">
-                  <span class="res-name-txt" :title="item.title">{{ item.title }}</span>
-                  <span class="res-sub-txt">{{ item.platform || '全平台' }} · <code style="color:#60a5fa;">{{ item.res_id || item.id }}</code></span>
+                  <div class="res-title-badge-row">
+                    <span class="res-name-txt" :title="item.title">{{ item.title }}</span>
+                    <span v-if="item.badge" class="badge badge-gold" title="视觉角标文案">{{ item.badge }}</span>
+                  </div>
+                  <span class="res-sub-txt"><code style="color:#60a5fa;">{{ item.res_id || item.id }}</code></span>
                 </div>
               </div>
             </td>
-            <!-- 2. 版本号 -->
+            <!-- 2. 版本号 (version) -->
             <td><span class="badge badge-blue">{{ item.version || '最新版' }}</span></td>
-            <!-- 3. 所属分类 -->
+            <!-- 3. 所属分类 (category) -->
             <td><span class="badge badge-gray">{{ getCategoryName(item.category) }}</span></td>
-            <!-- 4. 体积 -->
-            <td>{{ item.size || '-' }}</td>
-            <!-- 5. 评分 -->
+            <!-- 4. 分类细分标签 (tags) -->
+            <td>
+              <div class="table-tags-wrap" v-if="getTagList(item.tags).length">
+                <span v-for="t in getTagList(item.tags).slice(0, 3)" :key="t" class="badge badge-tag">
+                  {{ t }}
+                </span>
+                <span v-if="getTagList(item.tags).length > 3" class="badge badge-gray" :title="getTagList(item.tags).slice(3).join(', ')">
+                  +{{ getTagList(item.tags).length - 3 }}
+                </span>
+              </div>
+              <span v-else style="color:#64748b;font-size:12px;">无细分标签</span>
+            </td>
+            <!-- 5. 平台与体积 (platform & size) -->
+            <td>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <span class="badge badge-plat">{{ item.platform || '全平台' }}</span>
+                <span style="font-size:11px;color:#94a3b8;">{{ item.size || '-' }}</span>
+              </div>
+            </td>
+            <!-- 6. 极客评分 (rating) -->
             <td><span style="color:#f59e0b;font-weight:700;">★ {{ item.rating || '9.9' }}</span></td>
-            <!-- 6. 累计转存 -->
-            <td><b style="color:#38bdf8;">{{ item.downloads || 0 }}</b> 次</td>
-            <!-- 7. 收藏数 -->
-            <td><span style="color:#ec4899;font-weight:600;">❤ {{ item.favCount || 0 }}</span></td>
-            <!-- 8. 网盘直链 (简短胶囊展示，点击直达) -->
+            <!-- 7. 累计转存与收藏 (downloads / favCount) -->
             <td>
-              <a
-                v-if="item.panUrl"
-                :href="item.panUrl"
-                target="_blank"
-                class="pan-link-pill"
-                :title="item.panUrl + (item.pwd ? ' (提取码: ' + item.pwd + ')' : '')"
-              >
-                <span>🔗 {{ getPanShortName(item.panUrl) }} ↗</span>
-              </a>
-              <span v-else style="color:#64748b;">无链接</span>
+              <div style="display:flex;flex-direction:column;gap:2px;font-size:12px;">
+                <span><b style="color:#38bdf8;">{{ item.downloads || 0 }}</b> 转存</span>
+                <span style="color:#ec4899;">❤ {{ item.favCount || 0 }}</span>
+              </div>
             </td>
-            <!-- 9. 提取码 -->
+            <!-- 8. 网盘直链与提取码 -->
             <td>
-              <span v-if="item.pwd && item.pwd !== '免码'" class="badge badge-green">{{ item.pwd }}</span>
-              <span v-else class="badge badge-gray">免码</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <a
+                  v-if="item.panUrl"
+                  :href="item.panUrl"
+                  target="_blank"
+                  class="pan-link-pill"
+                  :title="item.panUrl"
+                >
+                  <span>🔗 {{ getPanShortName(item.panUrl) }} ↗</span>
+                </a>
+                <span v-else style="color:#64748b;font-size:12px;">无链接</span>
+                <span v-if="item.pwd && item.pwd !== '免码'" class="badge badge-green">{{ item.pwd }}</span>
+                <span v-else class="badge badge-gray" style="font-size:10px;">免码</span>
+              </div>
             </td>
-            <!-- 10. 角标标签 -->
-            <td>
-              <span v-if="item.badge" class="badge badge-gold">{{ item.badge }}</span>
-              <span v-else style="color:#64748b;">-</span>
-            </td>
-            <!-- 11. 更新时间 -->
+            <!-- 9. 更新时间 -->
             <td style="font-size:12px;color:#64748b;">
               {{ (item.updated || item.created || '-').substring(0, 10) }}
             </td>
@@ -145,6 +160,14 @@ const selectedCategory = ref('');
 const sortOrder = ref('-downloads');
 const categories = ref([]);
 const failedIcons = reactive({});
+
+const getTagList = (tags) => {
+  if (!tags) return [];
+  if (Array.isArray(tags)) {
+    return tags.map(t => (typeof t === 'string' ? t : (t.text || t.name || ''))).filter(Boolean);
+  }
+  return [];
+};
 
 const getCategoryName = (catId) => {
   const found = categories.value.find(c => c.cat_id === catId);
@@ -252,6 +275,38 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.08);
   padding: 2px 4px;
   border-radius: 3px;
+}
+
+
+.res-title-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.table-tags-wrap {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.badge-tag {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.badge-plat {
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
 }
 
 </style>
